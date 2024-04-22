@@ -55,11 +55,11 @@ def main():
             "- Associated findings such as pleural effusions and mediastinal lymphadenopathy may also be present.\n\n"
             "Based on these findings and considering the patient's clinical history and symptoms, it is likely that the patient is infected with tuberculosis."
 
-            "ይህ የኤክስሬይ ምስል ከሳንባ ነቀርሳ (ቲቢ) ኢንፌክሽን ጋር የሚጣጣሙ ባህሪያትን ያሳያል
-            "- በሳንባ ቲሹ ውስጥ እብጠት እና ፈሳሽ መከማቸትን የሚያመለክቱ ግልጽነት እና ማጠናከሪያ ቦታዎች ይታያሉ.
-            "- ጥቅጥቅ ባለ ቲሹ በተከበቡ ጨለማ ቦታዎች የተወከሉት ካቪቴቶች የሚታዩ ሲሆን ይህም የተራቀቀ የቲቢ በሽታ ይጠቁማል.
+            "ይህ የኤክስሬይ ምስል ከሳንባ ነቀርሳ (ቲቢ) ኢንፌክሽን ጋር የሚጣጣሙ ባህሪያትን ያሳያል"
+            "- በሳንባ ቲሹ ውስጥ እብጠት እና ፈሳሽ መከማቸትን የሚያመለክቱ ግልጽነት እና ማጠናከሪያ ቦታዎች ይታያሉ."
+            "- ጥቅጥቅ ባለ ቲሹ በተከበቡ ጨለማ ቦታዎች የተወከሉት ካቪቴቶች የሚታዩ ሲሆን ይህም የተራቀቀ የቲቢ በሽታ ይጠቁማል."
             "- የተዛባዎች ስርጭት በሁለትዮሽ እና ያልተመጣጠነ ይመስላል, የቲቢ ኢንፌክሽን የተለመደ ነው.
-            "- እንደ pleural effusions እና mediastinal lymphadenopathy የመሳሰሉ ተያያዥ ግኝቶችም ሊኖሩ ይችላሉ።
+            "- እንደ pleural effusions እና mediastinal lymphadenopathy የመሳሰሉ ተያያዥ ግኝቶችም ሊኖሩ ይችላሉ።"
             "በእነዚህ ግኝቶች ላይ በመመርኮዝ እና የታካሚውን ክሊኒካዊ ታሪክ እና ምልክቶች ከግምት ውስጥ በማስገባት በሽተኛው በሳንባ ነቀርሳ ሊጠቃ ይችላል."
         )
         else:
