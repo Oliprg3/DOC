@@ -47,7 +47,18 @@ def main():
 
         predicted_class = classify_image_onnx(image, session)
 
-        st.write(f"This X-ray image shows : {predicted_class} radiographic image")
-        
+        if predicted_class == 0:
+            st.wrtie("This X-ray image shows characteristic features consistent with tuberculosis (TB) infection:\n"
+            "- Areas of increased opacity and consolidation are observed, indicating inflammation and fluid accumulation in the lung tissue.\n"
+            "- Cavitations, represented by dark areas surrounded by dense tissue, are visible, suggesting advanced TB disease.\n"
+            "- The distribution of abnormalities appears bilateral and asymmetrical, typical of TB infection.\n"
+            "- Associated findings such as pleural effusions and mediastinal lymphadenopathy may also be present.\n\n"
+            "Based on these findings and considering the patient's clinical history and symptoms, it is likely that the patient is infected with tuberculosis."
+        )
+        else:
+            st.write( "This X-ray image does not show significant abnormalities indicative of tuberculosis (TB) infection.\n"
+            "There are no areas of increased opacity, consolidation, or cavitations observed in the lung tissue.\n\n"
+            "Considering the absence of characteristic TB findings and in conjunction with the patient's clinical history and symptoms, it is unlikely that the patient is infected with tuberculosis."
+        )
 if __name__ == "__main__":
     main()
