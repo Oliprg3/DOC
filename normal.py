@@ -1,8 +1,9 @@
 import streamlit as st
 import onnxruntime
-import numpy as np
-from PIL import Image
+import torch
+import torch.nn as nn
 import torchvision.transforms as transforms
+from PIL import Image
 import time
 
 def load_onnx_model(model_path):
@@ -32,42 +33,68 @@ def classify_image_onnx(image, session):
     predicted_class = "Normal" if result[0][0] > result[0][1] else "Tuberculosis"
     return predicted_class
 
+def is_lung_xray(image, classifier, transform):
+    image = transform(image).unsqueeze(0)
+    classifier.eval()
+    with torch.no_grad():
+        output = classifier(image)
+    prediction = torch.sigmoid(output).item()
+    return prediction > 0.5
+
+def load_classifier_model():
+    model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, 1)
+    # Load your fine-tuned model weights here
+    model.load_state_dict(torch.load("lung_xray_classifier.pth", map_location=torch.device('cpu')))
+    return model
+
 def main():
     st.title('Upload Lung X-ray image')
 
-    
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
     time.sleep(2)
     if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        
+        classifier_model = load_classifier_model()
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        
+        if not is_lung_xray(image, classifier_model, transform):
+            st.write("Please upload a valid lung X-ray image.")
+            
+
         onnx_model_path = "resnet.onnx"
         session = load_onnx_model(onnx_model_path)
 
-        image = Image.open(uploaded_file)
         st.image(image, caption='Uploaded Image', use_column_width=True)
 
         predicted_class = classify_image_onnx(image, session)
-        if predicted_class=="Tuberculosis":
-           st.write("This X-ray image shows characteristic features consistent with tuberculosis (TB) infection:\n"
-                    "- Areas of increased opacity and consolidation are observed, indicating inflammation and fluid accumulation in the lung tissue.\n"
-                    "- Cavitations, represented by dark areas surrounded by dense tissue, are visible, suggesting advanced TB disease.\n"
-                    "- The distribution of abnormalities appears bilateral and asymmetrical, typical of TB infection.\n"
-                    "- Associated findings such as pleural effusions and mediastinal lymphadenopathy may also be present.\n\n"
-                    "Based on these findings and considering the patient's clinical history and symptoms, it is likely that the patient is infected with tuberculosis.\n\n"
-                    "ይህ የኤክስሬይ ምስል ከሳንባ ነቀርሳ (ቲቢ) ኢንፌክሽን ጋር የሚጣጣሙ ባህሪያትን ያሳያል\n"
-                    "- በሳንባ ቲሹ ውስጥ እብጠት እና ፈሳሽ መከማቸትን የሚያመለክቱ ግልጽነት እና ማጠናከሪያ ቦታዎች ይታያሉ\n"
-                    "- ጥቅጥቅ ባለ ቲሹ በተከበቡ ጨለማ ቦታዎች የተወከሉት ካቪቴቶች የሚታዩ ሲሆን ይህም የተራቀቀ የቲቢ በሽታ ይጠቁማል\n"
-                    "- የተዛባዎች ስርጭት በሁለትዮሽ እና ያልተመጣጠነ ይመስላል, የቲቢ ኢንፌክሽን የተለመደ ነው\n"
-                    "- እንደ pleural effusions እና mediastinal lymphadenopathy የመሳሰሉ ተያያዥ ግኝቶችም ሊኖሩ ይችላል\n"
-                    "በእነዚህ ግኝቶች ላይ በመመርኮዝ እና የታካሚውን ክሊኒካዊ ታሪክ እና ምልክቶች ከግምት ውስጥ በማስገባት በሽተኛው በሳንባ ነቀርሳ ሊጠቃ ይችላል."
-                    )
+        if predicted_class == "Tuberculosis":
+            st.write("This X-ray image shows characteristic features consistent with tuberculosis (TB) infection:\n"
+                     "- Areas of increased opacity and consolidation are observed, indicating inflammation and fluid accumulation in the lung tissue.\n"
+                     "- Cavitations, represented by dark areas surrounded by dense tissue, are visible, suggesting advanced TB disease.\n"
+                     "- The distribution of abnormalities appears bilateral and asymmetrical, typical of TB infection.\n"
+                     "- Associated findings such as pleural effusions and mediastinal lymphadenopathy may also be present.\n\n"
+                     "Based on these findings and considering the patient's clinical history and symptoms, it is likely that the patient is infected with tuberculosis.\n\n"
+                     "ይህ የኤክስሬይ ምስል ከሳንባ ነቀርሳ (ቲቢ) ኢንፌክሽን ጋር የሚጣጣሙ ባህሪያትን ያሳያል\n"
+                     "- በሳንባ ቲሹ ውስጥ እብጠት እና ፈሳሽ መከማቸትን የሚያመለክቱ ግልጽነት እና ማጠናከሪያ ቦታዎች ይታያሉ\n"
+                     "- ጥቅጥቅ ባለ ቲሹ በተከበቡ ጨለማ ቦታዎች የተወከሉት ካቪቴቶች የሚታዩ ሲሆን ይህም የተራቀቀ የቲቢ በሽታ ይጠቁማል\n"
+                     "- የተዛባዎች ስርጭት በሁለትዮሽ እና ያልተመጣጠነ ይመስላል, የቲቢ ኢንፌክሽን የተለመደ ነው\n"
+                     "- እንደ pleural effusions እና mediastinal lymphadenopathy የመሳሰሉ ተያያዥ ግኝቶችም ሊኖሩ ይችላል\n"
+                     "በእነዚህ ግኝቶች ላይ በመመርኮዝ እና የታካሚውን ክሊኒካዊ ታሪክ እና ምልክቶች ከግምት ውስጥ በማስገባት በሽተኛው በሳንባ ነቀርሳ ሊጠቃ ይችላል."
+                     )
         else:
             st.write("This X-ray image does not show significant abnormalities indicative of tuberculosis (TB) infection.\n"
-              "There are no areas of increased opacity, consolidation, or cavitations observed in the lung tissue.\n\n"
-              "Considering the absence of characteristic TB findings and in conjunction with the patient's clinical history and symptoms, it is unlikely that the patient is infected with tuberculosis.\n\n"
-              "ይህ የኤክስሬይ ምስል የሳንባ ነቀርሳ (ቲቢ) ኢንፌክሽንን የሚያመለክቱ ጉልህ የሆኑ ያልተለመዱ ነገሮችን አያሳይም\n"
-              "በሳንባ ቲሹ ውስጥ የጨመሩ ግልጽነት፣ ማጠናከሪያ ወይም ክፍተቶች የታዩባቸው ቦታዎች የሉም\n\n"
-              "ባህሪያዊ የቲቢ ግኝቶች አለመኖራቸውን እና ከታካሚው ክሊኒካዊ ታሪክ እና ምልክቶች ጋር በመተባበር በሽተኛው በሳንባ ነቀርሳ መያዙ አይቀርም."
-              )
-
+                     "There are no areas of increased opacity, consolidation, or cavitations observed in the lung tissue.\n\n"
+                     "Considering the absence of characteristic TB findings and in conjunction with the patient's clinical history and symptoms, it is unlikely that the patient is infected with tuberculosis.\n\n"
+                     "ይህ የኤክስሬይ ምስል የሳንባ ነቀርሳ (ቲቢ) ኢንፌክሽንን የሚያመለክቱ ጉልህ የሆኑ ያልተለመዱ ነገሮችን አያሳይም\n"
+                     "በሳንባ ቲሹ ውስጥ የጨመሩ ግልጽነት፣ ማጠናከሪያ ወይም ክፍተቶች የታዩባቸው ቦታዎች የሉም\n\n"
+                     "ባህሪያዊ የቲቢ ግኝቶች አለመኖራቸውን እና ከታካሚው ክሊኒካዊ ታሪክ እና ምልክቶች ጋር በመተባበር በሽተኛው በሳንባ ነቀርሳ መያዙ አይቀርም."
+                     )
 
 main()
