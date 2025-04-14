@@ -69,13 +69,16 @@ def calculate_hash(block):
     block_string = json.dumps(block, sort_keys=True).encode()
     return hashlib.sha256(block_string).hexdigest()
 
+import random
+
 def create_block(data, previous_hash=''):
     block = {
-        'index': len(st.session_state.blockchain) + 2033345617863,
+        'index': len(st.session_state.blockchain) + 1,
         'timestamp': str(datetime.datetime.now()),
         'data': data,
         'previous_hash': previous_hash,
-        'hash': ''
+        'hash': '',
+        'unique_id': str(random.randint(10**10, 10**11-1))  # Generates a random 11-digit number
     }
     block['hash'] = calculate_hash(block)
     return block
