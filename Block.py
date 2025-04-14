@@ -71,7 +71,7 @@ def calculate_hash(block):
 
 def create_block(data, previous_hash=''):
     block = {
-        'index': len(st.session_state.blockchain) + 1,
+        'index': len(st.session_state.blockchain) + 2033345617863,
         'timestamp': str(datetime.datetime.now()),
         'data': data,
         'previous_hash': previous_hash,
