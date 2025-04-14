@@ -1,11 +1,11 @@
-
 import streamlit as st
 import hashlib
 import json
 import datetime
-import pandas as pda
+import pandas as pd
 import os
 import base64
+import random
 from typing import Optional
 
 # File to store the blockchain
@@ -38,15 +38,12 @@ def display_document(file_data: str, file_name: str):
     file_ext = file_name.split('.')[-1].lower()
 
     if file_ext == 'pdf':
-        # Display PDF
         base64_pdf = base64.b64encode(decoded).decode('utf-8')
         pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf">'
         st.markdown(pdf_display, unsafe_allow_html=True)
     elif file_ext in {'png', 'jpg', 'jpeg'}:
-        # Display image
         st.image(decoded, caption=file_name, use_column_width=True)
     else:
-        # Download button for unsupported display types
         st.download_button(
             label="Download Document",
             data=decoded,
@@ -63,13 +60,11 @@ def load_blockchain():
 
 def save_blockchain(blockchain):
     with open(BLOCKCHAIN_FILE, 'w') as f:
-        json.dump(blockchain, f)
+        json.dump(blockchain, f, indent=2)
 
 def calculate_hash(block):
     block_string = json.dumps(block, sort_keys=True).encode()
     return hashlib.sha256(block_string).hexdigest()
-
-import random
 
 def create_block(data, previous_hash=''):
     block = {
@@ -78,7 +73,7 @@ def create_block(data, previous_hash=''):
         'data': data,
         'previous_hash': previous_hash,
         'hash': '',
-        'unique_id': str(random.randint(10**10, 10**11-1))  # Generates a random 11-digit number
+        'unique_id': f"{random.randint(10**11, 10**12 - 1):012d}"  # 12-digit ID
     }
     block['hash'] = calculate_hash(block)
     return block
@@ -88,7 +83,7 @@ def add_block(data):
     new_block = create_block(data, previous_hash)
     st.session_state.blockchain.append(new_block)
     save_blockchain(st.session_state.blockchain)
-    return new_block['index']
+    return new_block['unique_id']  # Return the 12-digit ID instead of index
 
 # Initialize blockchain
 st.session_state.blockchain = load_blockchain()
@@ -111,7 +106,6 @@ if menu == "Register Document":
                                     "Legal Contract",
                                     "Other"])
 
-        # Document-specific fields
         doc_details = {}
         if document_type == "Educational Certificate":
             doc_details['institution'] = st.text_input("Institution Name*")
@@ -121,15 +115,7 @@ if menu == "Register Document":
             doc_details['license_name'] = st.text_input("License Name*")
             doc_details['issuing_authority'] = st.text_input("Issuing Authority*")
             doc_details['expiry_date'] = st.text_input("Expiry Date")
-        elif document_type == "Property Document":
-            doc_details['property_address'] = st.text_input("Property Address*")
-            doc_details['document_purpose'] = st.selectbox("Document Purpose",
-                                                         ["Ownership Proof",
-                                                          "Sale Agreement",
-                                                          "Lease Agreement",
-                                                          "Other"])
 
-        # File upload with type restrictions
         uploaded_file = st.file_uploader(
             "Upload Document* (PDF, PNG, JPG, DOC/DOCX)",
             type=list(ALLOWED_EXTENSIONS),
@@ -146,7 +132,6 @@ if menu == "Register Document":
             elif uploaded_file is None:
                 st.error("Please upload a document")
             else:
-                # Prepare document data
                 document_data = {
                     "record_type": document_type,
                     "owner_name": name,
@@ -158,58 +143,53 @@ if menu == "Register Document":
                     **doc_details
                 }
 
-                block_index = add_block(document_data)
-                st.success(f"Document successfully registered! Your unique ID is: {block_index}")
-                st.info("Please save this ID securely for future verification.")
+                unique_id = add_block(document_data)
+                st.success(f"Document successfully registered!")
+                st.info(f"Your Unique Document ID: **{unique_id}**")
+                st.warning("Please save this ID securely for future verification.")
 
 elif menu == "Verify Document":
     st.header("Verify Document")
-
-    unique_id = st.text_input("Enter Unique Document ID")
+    unique_id = st.text_input("Enter 12-Digit Unique Document ID")
 
     if unique_id:
-        try:
-            block_index = int(unique_id) - 1
-            if 0 <= block_index < len(st.session_state.blockchain):
-                block = st.session_state.blockchain[block_index]
-                data = block['data']
+        if not unique_id.isdigit() or len(unique_id) != 12:
+            st.error("Please enter a valid 12-digit number")
+        else:
+            matching_block = None
+            for block in st.session_state.blockchain:
+                if block.get('unique_id') == unique_id:
+                    matching_block = block
+                    break
 
+            if matching_block:
+                data = matching_block['data']
                 st.subheader(f"Document Verification - ID: {unique_id}")
                 st.write(f"**Document Type:** {data['record_type']}")
                 st.write(f"**Owner Name:** {data['owner_name']}")
-                st.write(f"**Registered On:** {block['timestamp']}")
+                st.write(f"**Registered On:** {matching_block['timestamp']}")
 
-                # Display document-specific details
                 if data['record_type'] == "Educational Certificate":
                     st.write(f"**Institution:** {data.get('institution', 'N/A')}")
                     st.write(f"**Degree/Certificate:** {data.get('degree', 'N/A')}")
                     st.write(f"**Year of Issue:** {data.get('year', 'N/A')}")
-                elif data['record_type'] == "Professional License":
-                    st.write(f"**License Name:** {data.get('license_name', 'N/A')}")
-                    st.write(f"**Issuing Authority:** {data.get('issuing_authority', 'N/A')}")
-                    st.write(f"**Expiry Date:** {data.get('expiry_date', 'N/A')}")
 
-                # Document display section
                 st.subheader("Document Preview")
                 if data.get('file_content'):
                     display_document(data['file_content'], data['file_name'])
                 else:
                     st.warning("No document attached to this record")
 
-                # Blockchain verification
                 st.subheader("Blockchain Verification")
-                st.write(f"**Block Hash:** {block['hash']}")
-                calculated_hash = calculate_hash(block)
+                st.write(f"**Block Hash:** {matching_block['hash']}")
+                calculated_hash = calculate_hash(matching_block)
 
-                if calculated_hash == block['hash']:
+                if calculated_hash == matching_block['hash']:
                     st.success("✅ Document verified - This record has not been tampered with")
-                    st.write(f"**Previous Block Hash:** {block.get('previous_hash', 'Genesis Block')}")
                 else:
                     st.error("❌ Verification failed - This document may have been altered")
             else:
-                st.error("Invalid ID. Please check and try again.")
-        except ValueError:
-            st.error("Please enter a valid numeric ID")
+                st.error("Document not found. Please check the ID and try again.")
 
 elif menu == "View Blockchain":
     st.header("Blockchain Explorer")
@@ -217,13 +197,13 @@ elif menu == "View Blockchain":
     if st.session_state.blockchain:
         st.write(f"Total blocks in chain: {len(st.session_state.blockchain)}")
 
-        view_option = st.radio("View Options", ["All Records", "Search by Document Type", "View Specific Block"])
+        view_option = st.radio("View Options", ["All Records", "Search by Document Type"])
 
         if view_option == "All Records":
             simplified_blocks = []
             for block in st.session_state.blockchain:
                 simplified_blocks.append({
-                    "ID": block['index'],
+                    "Unique ID": block['unique_id'],
                     "Type": block['data']['record_type'],
                     "Owner": block['data']['owner_name'],
                     "Date": block['timestamp'],
@@ -233,12 +213,12 @@ elif menu == "View Blockchain":
 
         elif view_option == "Search by Document Type":
             doc_type = st.selectbox("Select Document Type",
-                                   ["Educational Certificate",
-                                    "Professional License",
-                                    "Property Document",
-                                    "Government ID",
-                                    "Legal Contract",
-                                    "Other"])
+                                  ["Educational Certificate",
+                                   "Professional License",
+                                   "Property Document",
+                                   "Government ID",
+                                   "Legal Contract",
+                                   "Other"])
 
             filtered_blocks = [block for block in st.session_state.blockchain
                              if block['data']['record_type'] == doc_type]
@@ -246,16 +226,9 @@ elif menu == "View Blockchain":
             if filtered_blocks:
                 st.write(f"Found {len(filtered_blocks)} {doc_type} records")
                 for block in filtered_blocks:
-                    with st.expander(f"ID: {block['index']} - {block['data']['owner_name']}"):
+                    with st.expander(f"ID: {block['unique_id']} - {block['data']['owner_name']}"):
                         st.json(block['data'])
             else:
                 st.info(f"No {doc_type} records found")
-
-        elif view_option == "View Specific Block":
-            block_num = st.number_input("Enter block number",
-                                      min_value=1,
-                                      max_value=len(st.session_state.blockchain))
-            block = st.session_state.blockchain[block_num - 1]
-            st.json(block)
     else:
         st.info("The blockchain is currently empty. No documents have been registered yet.")
