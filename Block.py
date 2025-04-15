@@ -13,18 +13,19 @@ BLOCKCHAIN_FILE = "blockchain_data.json"
 
 # Supported file types
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
+IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 # Initialize session state
 if 'blockchain' not in st.session_state:
     st.session_state.blockchain = []
 
 # --- File Handling Functions ---
-def is_allowed_file(filename: str) -> bool:
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def is_allowed_file(filename: str, file_types: set) -> bool:
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in file_types
 
-def save_uploaded_file(uploaded_file) -> Optional[str]:
+def save_uploaded_file(uploaded_file, file_types: set) -> Optional[str]:
     """Save uploaded file and return base64 encoded content"""
-    if uploaded_file is not None and is_allowed_file(uploaded_file.name):
+    if uploaded_file is not None and is_allowed_file(uploaded_file.name, file_types):
         file_content = uploaded_file.getvalue()
         return base64.b64encode(file_content).decode('utf-8')
     return None
@@ -41,7 +42,7 @@ def display_document(file_data: str, file_name: str):
         base64_pdf = base64.b64encode(decoded).decode('utf-8')
         pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf">'
         st.markdown(pdf_display, unsafe_allow_html=True)
-    elif file_ext in {'png', 'jpg', 'jpeg'}:
+    elif file_ext in IMAGE_EXTENSIONS:
         st.image(decoded, caption=file_name, use_column_width=True)
     else:
         st.download_button(
@@ -83,7 +84,7 @@ def add_block(data):
     new_block = create_block(data, previous_hash)
     st.session_state.blockchain.append(new_block)
     save_blockchain(st.session_state.blockchain)
-    return new_block['unique_id']  # Return the 12-digit ID instead of index
+    return new_block['unique_id']
 
 # Initialize blockchain
 st.session_state.blockchain = load_blockchain()
@@ -97,32 +98,47 @@ if menu == "Register Document":
     st.header("Register New Document")
 
     with st.form("registration_form"):
-        name = st.text_input("Owner's Full Name*")
-        document_type = st.selectbox("Document Type*",
-                                   ["Educational Certificate",
-                                    "Professional License",
-                                    "Property Document",
-                                    "Government ID",
-                                    "Legal Contract",
-                                    "Other"])
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            name = st.text_input("Owner's Full Name*")
+            document_type = st.selectbox("Document Type*",
+                                       ["Educational Certificate",
+                                        "Professional License",
+                                        "Property Document",
+                                        "Government ID",
+                                        "Legal Contract",
+                                        "Other"])
 
-        doc_details = {}
-        if document_type == "Educational Certificate":
-            doc_details['institution'] = st.text_input("Institution Name*")
-            doc_details['degree'] = st.text_input("Degree/Certificate Name*")
-            doc_details['year'] = st.text_input("Year of Issue*")
-        elif document_type == "Professional License":
-            doc_details['license_name'] = st.text_input("License Name*")
-            doc_details['issuing_authority'] = st.text_input("Issuing Authority*")
-            doc_details['expiry_date'] = st.text_input("Expiry Date")
+            doc_details = {}
+            if document_type == "Educational Certificate":
+                doc_details['institution'] = st.text_input("Institution Name*")
+                doc_details['degree'] = st.text_input("Degree/Certificate Name*")
+                doc_details['year'] = st.text_input("Year of Issue*")
+            elif document_type == "Professional License":
+                doc_details['license_name'] = st.text_input("License Name*")
+                doc_details['issuing_authority'] = st.text_input("Issuing Authority*")
+                doc_details['expiry_date'] = st.text_input("Expiry Date")
 
-        uploaded_file = st.file_uploader(
-            "Upload Document* (PDF, PNG, JPG, DOC/DOCX)",
-            type=list(ALLOWED_EXTENSIONS),
-            accept_multiple_files=False
-        )
+            uploaded_file = st.file_uploader(
+                "Upload Document* (PDF, PNG, JPG, DOC/DOCX)",
+                type=list(ALLOWED_EXTENSIONS),
+                accept_multiple_files=False
+            )
 
-        additional_notes = st.text_area("Additional Notes")
+            additional_notes = st.text_area("Additional Notes")
+
+        with col2:
+            st.subheader("Identity Photo")
+            st.write("Upload a clear selfie or ID photo")
+            identity_photo = st.file_uploader(
+                "Upload Identity Photo* (PNG, JPG)",
+                type=list(IMAGE_EXTENSIONS),
+                key="identity_uploader",
+                accept_multiple_files=False
+            )
+            if identity_photo:
+                st.image(identity_photo, caption="Your ID Photo", width=150)
 
         submitted = st.form_submit_button("Register Document")
 
@@ -131,12 +147,15 @@ if menu == "Register Document":
                 st.error("Please enter owner's name")
             elif uploaded_file is None:
                 st.error("Please upload a document")
+            elif identity_photo is None:
+                st.error("Please upload an identity photo")
             else:
                 document_data = {
                     "record_type": document_type,
                     "owner_name": name,
                     "file_name": uploaded_file.name,
-                    "file_content": save_uploaded_file(uploaded_file),
+                    "file_content": save_uploaded_file(uploaded_file, ALLOWED_EXTENSIONS),
+                    "identity_photo": save_uploaded_file(identity_photo, IMAGE_EXTENSIONS),
                     "file_type": uploaded_file.name.split('.')[-1].lower(),
                     "registration_date": str(datetime.date.today()),
                     "additional_notes": additional_notes,
@@ -164,15 +183,27 @@ elif menu == "Verify Document":
 
             if matching_block:
                 data = matching_block['data']
-                st.subheader(f"Document Verification - ID: {unique_id}")
-                st.write(f"**Document Type:** {data['record_type']}")
-                st.write(f"**Owner Name:** {data['owner_name']}")
-                st.write(f"**Registered On:** {matching_block['timestamp']}")
+                col1, col2 = st.columns([1, 2])
+                
+                with col1:
+                    if data.get('identity_photo'):
+                        st.subheader("Identity Verification")
+                        st.image(base64.b64decode(data['identity_photo']), 
+                                caption=f"Photo of {data['owner_name']}", 
+                                width=200)
+                    else:
+                        st.warning("No identity photo available")
+                
+                with col2:
+                    st.subheader(f"Document Verification - ID: {unique_id}")
+                    st.write(f"**Owner Name:** {data['owner_name']}")
+                    st.write(f"**Document Type:** {data['record_type']}")
+                    st.write(f"**Registered On:** {matching_block['timestamp']}")
 
-                if data['record_type'] == "Educational Certificate":
-                    st.write(f"**Institution:** {data.get('institution', 'N/A')}")
-                    st.write(f"**Degree/Certificate:** {data.get('degree', 'N/A')}")
-                    st.write(f"**Year of Issue:** {data.get('year', 'N/A')}")
+                    if data['record_type'] == "Educational Certificate":
+                        st.write(f"**Institution:** {data.get('institution', 'N/A')}")
+                        st.write(f"**Degree/Certificate:** {data.get('degree', 'N/A')}")
+                        st.write(f"**Year of Issue:** {data.get('year', 'N/A')}")
 
                 st.subheader("Document Preview")
                 if data.get('file_content'):
@@ -227,6 +258,10 @@ elif menu == "View Blockchain":
                 st.write(f"Found {len(filtered_blocks)} {doc_type} records")
                 for block in filtered_blocks:
                     with st.expander(f"ID: {block['unique_id']} - {block['data']['owner_name']}"):
+                        if block['data'].get('identity_photo'):
+                            st.image(base64.b64decode(block['data']['identity_photo']), 
+                                    caption="Identity Photo", 
+                                    width=150)
                         st.json(block['data'])
             else:
                 st.info(f"No {doc_type} records found")
