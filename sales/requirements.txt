@@ -1,9 +1,8 @@
-streamlit==1.26.0
-pandas==2.1.2
-numpy==1.26.0
-matplotlib==3.8.1
-seaborn==0.12.2
-scikit-learn==1.3.2
-plotly==5.18.0
-openpyxl==3.1.2
-# xgboost==1.7.6   # only keep if you truly need it
+streamlit==1.46.1
+pandas==2.2.3
+numpy==2.2.5
+matplotlib==3.10.3
+seaborn==0.13.2
+scikit-learn==1.6.1
+xgboost==3.0.5
+plotly==6.3.1
