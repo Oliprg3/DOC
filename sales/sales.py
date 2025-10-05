@@ -16,9 +16,17 @@ from sklearn.cluster import KMeans
 
 st.set_page_config(page_title="Pro Data Analytics Dashboard", layout="wide", initial_sidebar_state="expanded")
 
+import streamlit as st
+
 if "page" not in st.session_state:
     st.session_state["page"] = "Home"
-pages = ["Home","Data Upload","EDA & Cleaning","Visualization Dashboard","ML Training","Prediction Simulator","PCA & Dimensionality Reduction","Clustering","KPI Dashboard","Reports","About"]
+if "_rerun" not in st.session_state:
+    st.session_state["_rerun"] = False
+
+pages = ["Home","Data Upload","EDA & Cleaning","Visualization Dashboard",
+         "ML Training","Prediction Simulator","PCA & Dimensionality Reduction",
+         "Clustering","KPI Dashboard","Reports","About"]
+
 choice = st.sidebar.radio("Navigation", pages, index=pages.index(st.session_state["page"]))
 st.session_state["page"] = choice
 
@@ -28,6 +36,10 @@ for k in ['df','df_clean','model','scaler','features','train_columns','label_enc
 
 def go(page):
     st.session_state["page"] = page
+    st.session_state["_rerun"] = True
+
+if st.session_state.get("_rerun"):
+    st.session_state["_rerun"] = False
     st.experimental_rerun()
 
 if choice == "Home":
@@ -66,7 +78,7 @@ if choice == "Home":
         <button id="demo-btn" style="border:none;padding:10px 18px;border-radius:10px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.25);cursor:pointer">Take Tour</button>
       </div>
       <div class="tiles" style="margin-top:24px">
-        <div class="tile" onclick="">
+        <div class="tile">
           <h4>Upload</h4>
           <div>Load CSV / Excel and preview data with one click.</div>
         </div>
@@ -93,15 +105,18 @@ if choice == "Home":
       </div>
     </div>
     """, unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.markdown("### Quick actions")
-        if st.button("Go to Upload"):
-            go("Data Upload")
-        if st.button("Go to EDA & Cleaning"):
-            go("EDA & Cleaning")
-        if st.button("Go to Visualization"):
-            go("Visualization Dashboard")
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("Go to Upload"):
+        go("Data Upload")
+with col2:
+    if st.button("Go to EDA & Cleaning"):
+        go("EDA & Cleaning")
+with col3:
+    if st.button("Go to Visualization Dashboard"):
+        go("Visualization Dashboard")
+
         st.markdown("### Status")
         df = st.session_state.get('df')
         if df is not None:
