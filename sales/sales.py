@@ -250,7 +250,10 @@ elif choice == "EDA & Cleaning":
         cat_cols = df.select_dtypes(include=['object','category']).columns.tolist()
         if cat_cols:
             cat = st.selectbox("Choose categorical column", cat_cols)
-            vc = df[cat].value_counts().reset_index().rename(columns={'index':cat, cat:'count'})
+    
+   
+            vc = df[cat].value_counts().reset_index(name='count')
+    
             fig = px.bar(vc, x=cat, y='count', height=350)
             st.plotly_chart(fig, use_container_width=True)
 
