@@ -106,28 +106,29 @@ if choice == "Home":
     </div>
     """, unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button("Go to Upload"):
-        go("Data Upload")
-with col2:
-    if st.button("Go to EDA & Cleaning"):
-        go("EDA & Cleaning")
-with col3:
-    if st.button("Go to Visualization Dashboard"):
-        go("Visualization Dashboard")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("Go to Upload"):
+            go("Data Upload")
+    with col2:
+        if st.button("Go to EDA & Cleaning"):
+            go("EDA & Cleaning")
+    with col3:
+        if st.button("Go to Visualization Dashboard"):
+            go("Visualization Dashboard")
 
-        st.markdown("### Status")
-        df = st.session_state.get('df')
-        if df is not None:
-            st.success(f"Dataset loaded ({df.shape[0]} rows × {df.shape[1]} cols)")
-        else:
-            st.info("No dataset loaded")
+    st.markdown("### Status")
+    df = st.session_state.get('df')
+    if df is not None:
+        st.success(f"Dataset loaded ({df.shape[0]} rows × {df.shape[1]} cols)")
+    else:
+        st.info("No dataset loaded")
 
 elif choice == "Data Upload":
-    st.title("Upload Dataset")
+    st.title("Data Upload")
+
     uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv","xlsx"])
-    if uploaded_file is not None:
+     if uploaded_file is not None:
         try:
             if uploaded_file.name.lower().endswith(".csv"):
                 try:
