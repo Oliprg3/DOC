@@ -498,14 +498,29 @@ elif choice == "Clustering":
                 df_cluster = df.copy()
                 df_cluster['_cluster'] = labels
                 st.dataframe(df_cluster.head(), use_container_width=True)
-                st.write(df_cluster.groupby('_cluster').mean().T)
-                if num.shape[1] >= 2:
-                    cols = list(num.columns[:3])
-                    fig = px.scatter(df_cluster, x=cols[0], y=cols[1], color=df_cluster['_cluster'].astype(str), hover_data=cols)
-                    st.plotly_chart(fig, use_container_width=True)
+
+                
+                numeric_cols = df_cluster.select_dtypes(include=np.number).columns
+                st.write("Cluster means (numeric columns only):")
+                st.write(df_cluster.groupby('_cluster')[numeric_cols].mean().T)
+
+                
+                plot_cols = list(num.columns[:3])  
+                hover_cols = [c for c in plot_cols if c in numeric_cols]
+
+                fig = px.scatter(
+                    df_cluster, 
+                    x=plot_cols[0], 
+                    y=plot_cols[1], 
+                    color=df_cluster['_cluster'].astype(str), 
+                    hover_data=hover_cols
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
                 st.session_state['df_clean'] = df_cluster
             except Exception as e:
                 st.error(f"Clustering failed: {e}")
+
 
 elif choice == "KPI Dashboard":
     df = st.session_state.get('df_clean') if st.session_state.get('df_clean') is not None else st.session_state.get('df')
