@@ -128,7 +128,7 @@ elif choice == "Data Upload":
     st.title("Data Upload")
 
     uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv","xlsx"])
-     if uploaded_file is not None:
+    if uploaded_file is not None:
         try:
             if uploaded_file.name.lower().endswith(".csv"):
                 try:
